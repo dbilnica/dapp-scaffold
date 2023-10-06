@@ -1,9 +1,6 @@
 // TODO: SignMessage
-import { verify } from '@noble/ed25519';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import bs58 from 'bs58';
-import { FC, useCallback, useState } from 'react';
-import { notify } from "../utils/notifications";
+import { FC, useState } from 'react';
 
 import { Program, AnchorProvider, web3, utils, BN } from "@project-serum/anchor"
 import idl from "./solanapdas.json"
@@ -37,12 +34,14 @@ export const Bank: FC = () => {
 
             // we need to be sure that we've created a new PDA for our bank app
             // we need to add programId, bump is added automatically
+            // we want to fidn the address according to the seeds we are supplying there 
+            // we need to supply bank account string  utils.bytes.utf8.encode("bankaccount") - first string to generate our PDA
             const [bank] = await PublicKey.findProgramAddressSync([
                 utils.bytes.utf8.encode("bankaccount"),
-                (await anchProvider).wallet.publicKey.toBuffer()
-            ], program.programId)
+                (await anchProvider).wallet.publicKey.toBuffer() // public key of user that is creating PDA
+            ], program.programId) 
 
-            await program.rpc.create("Solana dBank", {
+            await program.rpc.create("Solana dBank - the best bank ever", {
                 // we need to add all the accounts we are working with 
                 accounts: {
                     bank,
@@ -64,8 +63,9 @@ export const Bank: FC = () => {
         const program = new Program(idl_object, programID, anchProvider)
 
         try {
+            //mapping it to work with each item separately - reference to all of the items in the returned array
             Promise.all((await connection.getProgramAccounts(programID)).map(async bank => ({
-                ...(await program.account.bank.fetch(bank.pubkey)),
+                ...(await program.account.bank.fetch(bank.pubkey)), //we need to fetch more info about the specific account
                 pubkey: bank.pubkey
             }))).then(banks => {
                 console.log(banks)
@@ -77,7 +77,7 @@ export const Bank: FC = () => {
             console.error("Error while getting the banks")
         }
     }
-
+    //publicKey is the PDA where we are going to deposit money
     const depositBank = async (publicKey) => {
         try {
             // obtaining provider
